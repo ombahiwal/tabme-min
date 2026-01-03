@@ -1,0 +1,515 @@
+{
+  "info": {
+    "_postman_id": "tabme-qr-ordering",
+    "name": "TabMe QR Ordering API",
+    "description": "API collection for the TabMe QR restaurant ordering system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.data && jsonData.data.token) {",
+                  "    pm.collectionVariables.set('token', jsonData.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@demo.com\",\n    \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"newuser@example.com\",\n    \"password\": \"password123\",\n    \"name\": \"New User\",\n    \"role\": \"restaurant_admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "item": [
+        {
+          "name": "Resolve QR Code",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/qr/demo-table-1",
+              "host": ["{{baseUrl}}"],
+              "path": ["qr", "demo-table-1"]
+            }
+          }
+        },
+        {
+          "name": "Get Restaurant Menu",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// First get restaurant ID from QR code",
+                  "// pm.variables.set('restaurantId', 'your-restaurant-id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/restaurants/{{restaurantId}}/menu",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurants", "{{restaurantId}}", "menu"]
+            }
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"restaurantId\": \"{{restaurantId}}\",\n    \"tableId\": \"{{tableId}}\",\n    \"items\": [\n        {\n            \"menuItemId\": \"{{menuItemId}}\",\n            \"quantity\": 2,\n            \"notes\": \"No onions please\"\n        }\n    ],\n    \"notes\": \"Birthday celebration\",\n    \"customerName\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders"]
+            }
+          }
+        },
+        {
+          "name": "Get Order Status",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/orders/{{orderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["orders", "{{orderId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restaurant - Orders",
+      "item": [
+        {
+          "name": "List Active Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/orders?status=created,accepted,preparing,ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "orders"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "created,accepted,preparing,ready"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List All Orders",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "orders"]
+            }
+          }
+        },
+        {
+          "name": "Accept Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"accepted\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "orders", "{{orderId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Update Order to Preparing",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"preparing\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "orders", "{{orderId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"cancelled\",\n    \"note\": \"Customer request\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/orders/{{orderId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "orders", "{{orderId}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restaurant - Menu",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Specials\",\n    \"description\": \"Daily specials\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Name\",\n    \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "categories", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "categories", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "List Menu Items",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "items"]
+            }
+          }
+        },
+        {
+          "name": "Create Menu Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"categoryId\": \"{{categoryId}}\",\n    \"name\": \"New Item\",\n    \"description\": \"Delicious new dish\",\n    \"price\": 14.99,\n    \"isAvailable\": true,\n    \"tags\": [\"New\", \"Popular\"],\n    \"allergens\": [\"Dairy\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "items"]
+            }
+          }
+        },
+        {
+          "name": "Update Menu Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Item\",\n    \"price\": 15.99,\n    \"isAvailable\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/items/{{menuItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "items", "{{menuItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Toggle Item Availability",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isAvailable\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/items/{{menuItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "items", "{{menuItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Menu Item",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/menu/items/{{menuItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "menu", "items", "{{menuItemId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Restaurant - Tables",
+      "item": [
+        {
+          "name": "List Tables",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "tables"]
+            }
+          }
+        },
+        {
+          "name": "Create Table",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"New Table\",\n    \"number\": 10,\n    \"capacity\": 4,\n    \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "tables"]
+            }
+          }
+        },
+        {
+          "name": "Update Table",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Table Name\",\n    \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/tables/{{tableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "tables", "{{tableId}}"]
+            }
+          }
+        },
+        {
+          "name": "Regenerate QR Code",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/tables/{{tableId}}/regenerate-qr",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "tables", "{{tableId}}", "regenerate-qr"]
+            }
+          }
+        },
+        {
+          "name": "Delete Table",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/restaurant/tables/{{tableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["restaurant", "tables", "{{tableId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

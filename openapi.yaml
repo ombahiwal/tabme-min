@@ -1,0 +1,798 @@
+openapi: 3.0.3
+info:
+  title: TabMe - QR Restaurant Ordering API
+  description: |
+    REST API for the TabMe QR restaurant ordering system.
+    
+    ## Authentication
+    Most restaurant-facing endpoints require JWT authentication.
+    Include the token in the Authorization header: `Bearer <token>`
+    
+    ## Flow
+    1. Customer scans QR code → GET /api/qr/{code}
+    2. Customer browses menu → GET /api/restaurants/{id}/menu
+    3. Customer places order → POST /api/orders
+    4. Customer tracks order → GET /api/orders/{id}
+    5. Restaurant staff login → POST /api/auth/login
+    6. Staff manages orders → GET/PATCH /api/restaurant/orders
+  version: 1.0.0
+  contact:
+    name: TabMe Support
+servers:
+  - url: http://localhost:3000/api
+    description: Local development
+  - url: https://your-app.vercel.app/api
+    description: Production (Vercel)
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: QR
+    description: QR code resolution
+  - name: Customer
+    description: Customer-facing endpoints
+  - name: Restaurant
+    description: Restaurant staff endpoints (protected)
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      description: Authenticate restaurant staff/admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@demo.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                      user:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register
+      description: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 6
+                name:
+                  type: string
+                role:
+                  type: string
+                  enum: [restaurant_admin, staff]
+      responses:
+        '201':
+          description: Registration successful
+        '409':
+          description: Email already exists
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get Current User
+      description: Get the authenticated user's profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      restaurant:
+                        $ref: '#/components/schemas/Restaurant'
+        '401':
+          description: Unauthorized
+
+  /qr/{code}:
+    get:
+      tags: [QR]
+      summary: Resolve QR Code
+      description: Convert QR code to restaurant and table information
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+          example: demo-table-1
+      responses:
+        '200':
+          description: QR code resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      table:
+                        $ref: '#/components/schemas/Table'
+                      restaurant:
+                        $ref: '#/components/schemas/Restaurant'
+        '404':
+          description: Invalid QR code
+
+  /restaurants/{id}/menu:
+    get:
+      tags: [Customer]
+      summary: Get Restaurant Menu
+      description: Get all available menu items grouped by category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Menu data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      restaurant:
+                        $ref: '#/components/schemas/Restaurant'
+                      menu:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MenuCategory'
+        '404':
+          description: Restaurant not found
+
+  /orders:
+    post:
+      tags: [Customer]
+      summary: Create Order
+      description: Place a new order for a table
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [restaurantId, tableId, items]
+              properties:
+                restaurantId:
+                  type: string
+                tableId:
+                  type: string
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [menuItemId, quantity]
+                    properties:
+                      menuItemId:
+                        type: string
+                      quantity:
+                        type: integer
+                        minimum: 1
+                      notes:
+                        type: string
+                notes:
+                  type: string
+                customerName:
+                  type: string
+      responses:
+        '201':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          description: Validation error
+
+  /orders/{id}:
+    get:
+      tags: [Customer]
+      summary: Get Order
+      description: Get order details and status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+
+  /restaurant/orders:
+    get:
+      tags: [Restaurant]
+      summary: List Orders
+      description: Get orders for the restaurant
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+          description: Filter by status (comma-separated)
+          example: created,accepted,preparing
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      orders:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+        '401':
+          description: Unauthorized
+
+  /restaurant/orders/{id}/status:
+    patch:
+      tags: [Restaurant]
+      summary: Update Order Status
+      description: Change the status of an order
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [created, accepted, preparing, ready, served, paid, cancelled]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Status updated
+        '404':
+          description: Order not found
+
+  /restaurant/menu/categories:
+    get:
+      tags: [Restaurant]
+      summary: List Categories
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of categories
+    post:
+      tags: [Restaurant]
+      summary: Create Category
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Category created
+
+  /restaurant/menu/categories/{id}:
+    get:
+      tags: [Restaurant]
+      summary: Get Category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category details
+    put:
+      tags: [Restaurant]
+      summary: Update Category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          description: Category updated
+    delete:
+      tags: [Restaurant]
+      summary: Delete Category
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Category deleted
+
+  /restaurant/menu/items:
+    get:
+      tags: [Restaurant]
+      summary: List Menu Items
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of items
+    post:
+      tags: [Restaurant]
+      summary: Create Menu Item
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemInput'
+      responses:
+        '201':
+          description: Item created
+
+  /restaurant/menu/items/{id}:
+    get:
+      tags: [Restaurant]
+      summary: Get Menu Item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item details
+    put:
+      tags: [Restaurant]
+      summary: Update Menu Item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemInput'
+      responses:
+        '200':
+          description: Item updated
+    delete:
+      tags: [Restaurant]
+      summary: Delete Menu Item
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item deleted
+
+  /restaurant/tables:
+    get:
+      tags: [Restaurant]
+      summary: List Tables
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of tables with QR URLs
+    post:
+      tags: [Restaurant]
+      summary: Create Table
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableInput'
+      responses:
+        '201':
+          description: Table created
+
+  /restaurant/tables/{id}:
+    get:
+      tags: [Restaurant]
+      summary: Get Table
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Table details
+    put:
+      tags: [Restaurant]
+      summary: Update Table
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableInput'
+      responses:
+        '200':
+          description: Table updated
+    delete:
+      tags: [Restaurant]
+      summary: Delete Table
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Table deleted
+
+  /restaurant/tables/{id}/regenerate-qr:
+    post:
+      tags: [Restaurant]
+      summary: Regenerate QR Code
+      description: Generate a new QR code for the table (old one will stop working)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: New QR code generated
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [restaurant_admin, staff, customer]
+        restaurantId:
+          type: string
+
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        currency:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        description:
+          type: string
+        logoUrl:
+          type: string
+
+    Table:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        number:
+          type: integer
+        qrCode:
+          type: string
+        qrUrl:
+          type: string
+        capacity:
+          type: integer
+        isActive:
+          type: boolean
+
+    TableInput:
+      type: object
+      required: [name, number]
+      properties:
+        name:
+          type: string
+        number:
+          type: integer
+        capacity:
+          type: integer
+        isActive:
+          type: boolean
+
+    MenuCategory:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuItem'
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+        isActive:
+          type: boolean
+
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: string
+        categoryId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+        isAvailable:
+          type: boolean
+        sortOrder:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        allergens:
+          type: array
+          items:
+            type: string
+
+    MenuItemInput:
+      type: object
+      required: [categoryId, name, price]
+      properties:
+        categoryId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        imageUrl:
+          type: string
+        isAvailable:
+          type: boolean
+        sortOrder:
+          type: integer
+        tags:
+          type: array
+          items:
+            type: string
+        allergens:
+          type: array
+          items:
+            type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [created, accepted, preparing, ready, served, paid, cancelled]
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              menuItemId:
+                type: string
+              name:
+                type: string
+              price:
+                type: number
+              quantity:
+                type: integer
+              notes:
+                type: string
+        total:
+          type: number
+        notes:
+          type: string
+        customerName:
+          type: string
+        statusHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+              note:
+                type: string
+        table:
+          $ref: '#/components/schemas/Table'
+        restaurant:
+          $ref: '#/components/schemas/Restaurant'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
