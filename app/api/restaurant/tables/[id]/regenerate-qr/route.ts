@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import connectDB from '@/lib/db';
 import { Table, Restaurant } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
+import { getBaseUrl } from '@/lib/base-url';
 import { successResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
 export const runtime = 'nodejs';
@@ -38,7 +39,7 @@ export async function POST(
       return notFoundResponse('Table not found');
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
 
     const restaurant = await Restaurant.findById(authUser.restaurantId);
 

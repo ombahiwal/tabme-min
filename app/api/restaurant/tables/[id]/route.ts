@@ -4,6 +4,7 @@ import connectDB from '@/lib/db';
 import { Table, Restaurant } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { tableSchema, validateRequest } from '@/lib/validation';
+import { getBaseUrl } from '@/lib/base-url';
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
 export const runtime = 'nodejs';
@@ -35,7 +36,7 @@ export async function GET(
       return notFoundResponse('Table not found');
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
 
     return successResponse({
       id: table._id,
@@ -121,7 +122,7 @@ export async function PUT(
       return notFoundResponse('Table not found');
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
 
     const restaurant = await Restaurant.findById(authUser.restaurantId);
 

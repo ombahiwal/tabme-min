@@ -4,6 +4,7 @@ import connectDB from '@/lib/db';
 import { Table, Restaurant } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { tableSchema, validateRequest } from '@/lib/validation';
+import { getBaseUrl } from '@/lib/base-url';
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, serverErrorResponse } from '@/lib/api-response';
 
 export const runtime = 'nodejs';
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     const restaurant = await Restaurant.findById(authUser.restaurantId);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
 
     return successResponse({
       tables: tables.map(table => ({
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const restaurant = await Restaurant.findById(authUser.restaurantId);
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const baseUrl = getBaseUrl(request);
 
     return successResponse({
       id: table._id,
