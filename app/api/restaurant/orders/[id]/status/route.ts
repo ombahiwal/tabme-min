@@ -5,6 +5,9 @@ import { getAuthUser } from '@/lib/auth';
 import { updateOrderStatusSchema, validateRequest } from '@/lib/validation';
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }

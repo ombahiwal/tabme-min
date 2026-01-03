@@ -4,6 +4,9 @@ import { Order, Table, MenuItem } from '@/lib/models';
 import { createOrderSchema, validateRequest } from '@/lib/validation';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();

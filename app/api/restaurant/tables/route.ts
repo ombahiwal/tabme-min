@@ -6,6 +6,9 @@ import { getAuthUser } from '@/lib/auth';
 import { tableSchema, validateRequest } from '@/lib/validation';
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const authUser = getAuthUser(request);

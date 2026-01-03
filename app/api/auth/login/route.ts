@@ -5,6 +5,9 @@ import { comparePassword, generateToken } from '@/lib/auth';
 import { loginSchema, validateRequest } from '@/lib/validation';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     await connectDB();

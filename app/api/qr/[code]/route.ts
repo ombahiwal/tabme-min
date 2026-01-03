@@ -3,6 +3,9 @@ import connectDB from '@/lib/db';
 import { Table, Restaurant } from '@/lib/models';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { code: string } }

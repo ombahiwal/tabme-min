@@ -5,6 +5,9 @@ import { Table } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { successResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }

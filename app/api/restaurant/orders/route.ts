@@ -4,6 +4,9 @@ import { Order, Table } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { successResponse, unauthorizedResponse, forbiddenResponse, serverErrorResponse } from '@/lib/api-response';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const authUser = getAuthUser(request);
