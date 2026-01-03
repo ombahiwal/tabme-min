@@ -11,6 +11,27 @@ export const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(1, 'Name is required'),
   role: z.enum(['restaurant_admin', 'staff']).optional(),
+  restaurant: z
+    .object({
+      name: z.string().min(1, 'Restaurant name is required'),
+      slug: z
+        .string()
+        .min(3, 'Slug must be at least 3 characters')
+        .max(50, 'Slug must be 50 characters or less')
+        .regex(/^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/, 'Slug must be letters/numbers with hyphens')
+        .optional(),
+      currency: z.string().min(1).optional(),
+      address: z.string().min(1, 'Address is required'),
+      phone: z.string().min(1, 'Phone is required'),
+    })
+    .optional(),
+}).superRefine((data, ctx) => {
+  if (data.role === 'restaurant_admin') {
+    if (!data.restaurant) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Restaurant details are required for admin signup' });
+      return;
+    }
+  }
 });
 
 // Menu category validation
@@ -40,6 +61,12 @@ export const menuItemUpdateSchema = menuItemSchema.partial();
 export const tableSchema = z.object({
   name: z.string().min(1, 'Table name is required'),
   number: z.number().int().positive('Table number must be positive'),
+  code: z
+    .string()
+    .min(1, 'Table code is required')
+    .max(50, 'Table code must be 50 characters or less')
+    .regex(/^[a-zA-Z0-9]+(?:-[a-zA-Z0-9]+)*$/, 'Table code must be letters/numbers with hyphens')
+    .optional(),
   capacity: z.number().int().positive().optional(),
   isActive: z.boolean().optional(),
 });

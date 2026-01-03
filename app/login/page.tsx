@@ -87,6 +87,12 @@ function LoginForm() {
         </form>
 
         <div className="mt-4 text-center">
+          <Link href="/register" className="text-sm text-blue-600 hover:text-blue-700">
+            New restaurant? Create an account
+          </Link>
+        </div>
+
+        <div className="mt-4 text-center">
           <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
             ← Back to Home
           </Link>

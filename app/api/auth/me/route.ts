@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       restaurant: restaurant ? {
         id: restaurant._id,
         name: restaurant.name,
+        slug: restaurant.slug,
         currency: restaurant.currency,
         address: restaurant.address,
         phone: restaurant.phone,

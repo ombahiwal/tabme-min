@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/db';
-import { Table } from '@/lib/models';
+import { Table, Restaurant } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { successResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
 
@@ -40,12 +40,16 @@ export async function POST(
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
+    const restaurant = await Restaurant.findById(authUser.restaurantId);
+
     return successResponse({
       id: table._id,
       name: table.name,
       number: table.number,
+      code: table.code,
       qrCode: table.qrCode,
       qrUrl: `${baseUrl}/qr/${table.qrCode}`,
+      aliasQrUrl: restaurant ? `${baseUrl}/r/${restaurant.slug}/${table.code}` : null,
       capacity: table.capacity,
       isActive: table.isActive,
     });

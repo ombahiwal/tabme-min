@@ -54,6 +54,7 @@ export async function GET(
       restaurant: {
         id: restaurant._id,
         name: restaurant.name,
+        slug: restaurant.slug,
         currency: restaurant.currency,
         description: restaurant.description,
         logoUrl: restaurant.logoUrl,

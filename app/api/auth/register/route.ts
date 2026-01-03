@@ -19,7 +19,14 @@ export async function POST(request: NextRequest) {
       return errorResponse(validation.error);
     }
 
-    const { email, password, name, role } = validation.data;
+    const { email, password, name, role, restaurant: restaurantInput } = validation.data;
+
+    const requestedRole = role || 'restaurant_admin';
+
+    // Marketplace signup: only allow restaurant_admin self-registration
+    if (requestedRole !== 'restaurant_admin') {
+      return errorResponse('Only restaurant admin self-registration is supported', 400);
+    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -29,24 +36,43 @@ export async function POST(request: NextRequest) {
 
     const passwordHash = await hashPassword(password);
 
-    // If registering as restaurant_admin, create a restaurant
-    let restaurantId;
-    if (role === 'restaurant_admin') {
-      const restaurant = await Restaurant.create({
-        name: `${name}'s Restaurant`,
-        currency: 'USD',
-        address: 'Please update',
-        phone: '000-000-0000',
-        email: email,
-      });
-      restaurantId = restaurant._id;
+    // Create restaurant for new admin
+    const slugify = (value: string) =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const desiredSlug = restaurantInput?.slug ? slugify(restaurantInput.slug) : slugify(restaurantInput?.name || `${name}'s restaurant`);
+    if (!desiredSlug || desiredSlug.length < 3) {
+      return errorResponse('Invalid restaurant slug', 400);
     }
+
+    const existingRestaurantSlug = await Restaurant.findOne({ slug: desiredSlug });
+    if (existingRestaurantSlug) {
+      return errorResponse('Restaurant slug already taken. Please choose another.', 409);
+    }
+
+    const restaurant = await Restaurant.create({
+      name: restaurantInput?.name || `${name}'s Restaurant`,
+      slug: desiredSlug,
+      currency: restaurantInput?.currency || 'USD',
+      address: restaurantInput?.address || 'Please update',
+      phone: restaurantInput?.phone || '000-000-0000',
+      email: email,
+      isActive: true,
+    });
+
+    const restaurantId = restaurant._id;
 
     const user = await User.create({
       email,
       passwordHash,
       name,
-      role: role || 'customer',
+      role: requestedRole,
       restaurantId,
     });
 

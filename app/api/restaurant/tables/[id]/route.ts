@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/db';
-import { Table } from '@/lib/models';
+import { Table, Restaurant } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { tableSchema, validateRequest } from '@/lib/validation';
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, notFoundResponse, serverErrorResponse } from '@/lib/api-response';
@@ -89,6 +89,28 @@ export async function PUT(
       }
     }
 
+    const toCode = (value: string) =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    if (validation.data.code) {
+      const desiredCode = toCode(validation.data.code);
+      const existingCode = await Table.findOne({
+        restaurantId: authUser.restaurantId,
+        code: desiredCode,
+        _id: { $ne: id },
+      });
+      if (existingCode) {
+        return errorResponse(`Table code ${desiredCode} already exists`);
+      }
+      (validation.data as any).code = desiredCode;
+    }
+
     const table = await Table.findOneAndUpdate(
       { _id: id, restaurantId: authUser.restaurantId },
       validation.data,
@@ -101,12 +123,16 @@ export async function PUT(
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
+    const restaurant = await Restaurant.findById(authUser.restaurantId);
+
     return successResponse({
       id: table._id,
       name: table.name,
       number: table.number,
+      code: table.code,
       qrCode: table.qrCode,
       qrUrl: `${baseUrl}/qr/${table.qrCode}`,
+      aliasQrUrl: restaurant ? `${baseUrl}/r/${restaurant.slug}/${table.code}` : null,
       capacity: table.capacity,
       isActive: table.isActive,
     });

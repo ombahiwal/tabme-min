@@ -7,8 +7,10 @@ interface Table {
   id: string;
   name: string;
   number: number;
+  code?: string;
   qrCode: string;
   qrUrl: string;
+  aliasQrUrl?: string | null;
   capacity?: number;
   isActive: boolean;
 }
@@ -22,6 +24,7 @@ export default function TablesPage() {
   const [tableForm, setTableForm] = useState({
     name: '',
     number: '',
+    code: '',
     capacity: '4',
     isActive: true,
   });
@@ -56,6 +59,7 @@ export default function TablesPage() {
       setTableForm({
         name: table.name,
         number: table.number.toString(),
+        code: table.code || '',
         capacity: table.capacity?.toString() || '4',
         isActive: table.isActive,
       });
@@ -67,6 +71,7 @@ export default function TablesPage() {
       setTableForm({
         name: `Table ${nextNumber}`,
         number: nextNumber.toString(),
+        code: '',
         capacity: '4',
         isActive: true,
       });
@@ -80,6 +85,7 @@ export default function TablesPage() {
     const payload = {
       name: tableForm.name,
       number: parseInt(tableForm.number),
+      code: tableForm.code.trim() ? tableForm.code.trim() : undefined,
       capacity: parseInt(tableForm.capacity) || 4,
       isActive: tableForm.isActive,
     };
@@ -214,16 +220,16 @@ export default function TablesPage() {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-xs text-gray-500 mb-2 break-all">{table.qrUrl}</p>
+                  <p className="text-xs text-gray-500 mb-2 break-all">{table.aliasQrUrl || table.qrUrl}</p>
                   <div className="flex gap-2 justify-center">
                     <button
-                      onClick={() => copyToClipboard(table.qrUrl)}
+                      onClick={() => copyToClipboard(table.aliasQrUrl || table.qrUrl)}
                       className="text-xs text-blue-600 hover:text-blue-800"
                     >
                       📋 Copy URL
                     </button>
                     <a
-                      href={table.qrUrl}
+                      href={table.aliasQrUrl || table.qrUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-blue-600 hover:text-blue-800"
@@ -294,6 +300,21 @@ export default function TablesPage() {
                   className="w-full px-3 py-2 border rounded-lg"
                   min="1"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Table Code (optional)</label>
+                <input
+                  type="text"
+                  value={tableForm.code}
+                  onChange={(e) =>
+                    setTableForm({ ...tableForm, code: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="e.g., table-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Used in alias QR: /r/&lt;restaurant-slug&gt;/&lt;table-code&gt;
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Capacity</label>

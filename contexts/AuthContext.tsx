@@ -13,6 +13,7 @@ interface User {
 interface Restaurant {
   id: string;
   name: string;
+  slug?: string;
   currency: string;
   address: string;
   phone: string;
@@ -26,6 +27,16 @@ interface AuthContextType {
   restaurant: Restaurant | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
+  registerRestaurant: (input: {
+    ownerName: string;
+    email: string;
+    password: string;
+    restaurantName: string;
+    restaurantSlug?: string;
+    address: string;
+    phone: string;
+    currency?: string;
+  }) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -98,6 +109,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await fetchUser(newToken);
   };
 
+  const registerRestaurant: AuthContextType['registerRestaurant'] = async (input) => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: input.email,
+        password: input.password,
+        name: input.ownerName,
+        role: 'restaurant_admin',
+        restaurant: {
+          name: input.restaurantName,
+          slug: input.restaurantSlug,
+          address: input.address,
+          phone: input.phone,
+          currency: input.currency,
+        },
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Registration failed');
+    }
+
+    const { token: newToken, user: newUser } = data.data;
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+    setUser(newUser);
+    await fetchUser(newToken);
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -106,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, restaurant, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, restaurant, token, login, registerRestaurant, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

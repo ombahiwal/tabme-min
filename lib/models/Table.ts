@@ -6,6 +6,7 @@ export interface ITable extends Document {
   restaurantId: mongoose.Types.ObjectId;
   name: string;
   number: number;
+  code: string;
   qrCode: string;
   isActive: boolean;
   capacity?: number;
@@ -29,6 +30,12 @@ const TableSchema = new Schema<ITable>(
       type: Number,
       required: true,
     },
+    code: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
     qrCode: {
       type: String,
       required: true,
@@ -48,10 +55,17 @@ const TableSchema = new Schema<ITable>(
   }
 );
 
+// Enforce per-restaurant unique table code
+TableSchema.index({ restaurantId: 1, code: 1 }, { unique: true });
+
 // Generate unique QR code before saving
 TableSchema.pre('save', function (next) {
   if (!this.qrCode) {
     this.qrCode = crypto.randomBytes(16).toString('hex');
+  }
+  if (!this.code) {
+    // Default human-friendly code (still validated by unique index)
+    this.code = `table-${this.number}`.toLowerCase();
   }
   next();
 });

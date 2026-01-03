@@ -8,21 +8,27 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: { restaurantSlug: string; tableCode: string } }
 ) {
   try {
     await connectDB();
 
-    const { code } = params;
+    const restaurantSlug = params.restaurantSlug.toLowerCase();
+    const tableCode = params.tableCode.toLowerCase();
 
-    const table = await Table.findOne({ qrCode: code, isActive: true });
-    if (!table) {
-      return notFoundResponse('Invalid or inactive QR code');
+    const restaurant = await Restaurant.findOne({ slug: restaurantSlug, isActive: true });
+    if (!restaurant) {
+      return notFoundResponse('Restaurant not found or inactive');
     }
 
-    const restaurant = await Restaurant.findById(table.restaurantId);
-    if (!restaurant || !restaurant.isActive) {
-      return notFoundResponse('Restaurant not found or inactive');
+    const table = await Table.findOne({
+      restaurantId: restaurant._id,
+      code: tableCode,
+      isActive: true,
+    });
+
+    if (!table) {
+      return notFoundResponse('Table not found or inactive');
     }
 
     return successResponse({
@@ -44,7 +50,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error('QR resolve error:', error);
+    console.error('QR resolve (slug/code) error:', error);
     return serverErrorResponse();
   }
 }

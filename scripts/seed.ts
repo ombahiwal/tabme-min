@@ -21,6 +21,7 @@ const UserSchema = new mongoose.Schema({
 
 const RestaurantSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  slug: { type: String, required: true, unique: true, lowercase: true },
   currency: { type: String, default: 'USD' },
   address: { type: String, required: true },
   phone: { type: String, required: true },
@@ -34,10 +35,13 @@ const TableSchema = new mongoose.Schema({
   restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   name: { type: String, required: true },
   number: { type: Number, required: true },
+  code: { type: String, required: true, lowercase: true },
   qrCode: { type: String, required: true, unique: true },
   isActive: { type: Boolean, default: true },
   capacity: { type: Number, default: 4 },
 }, { timestamps: true });
+
+TableSchema.index({ restaurantId: 1, code: 1 }, { unique: true });
 
 const MenuCategorySchema = new mongoose.Schema({
   restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'Restaurant', required: true },
@@ -116,6 +120,7 @@ async function seed() {
     console.log('🏪 Creating demo restaurant...');
     const restaurant = await Restaurant.create({
       name: 'The Golden Fork',
+      slug: 'the-golden-fork',
       currency: 'USD',
       address: '123 Main Street, Foodville, CA 90210',
       phone: '(555) 123-4567',
@@ -151,11 +156,11 @@ async function seed() {
     // Create tables with QR codes
     console.log('🪑 Creating tables...');
     const tableData = [
-      { name: 'Table 1', number: 1, qrCode: 'demo-table-1', capacity: 4 },
-      { name: 'Table 2', number: 2, qrCode: 'demo-table-2', capacity: 4 },
-      { name: 'Table 3', number: 3, qrCode: 'demo-table-3', capacity: 2 },
-      { name: 'Patio 1', number: 4, qrCode: 'demo-patio-1', capacity: 6 },
-      { name: 'VIP Room', number: 5, qrCode: 'demo-vip', capacity: 8 },
+      { name: 'Table 1', number: 1, code: 'table-1', qrCode: 'demo-table-1', capacity: 4 },
+      { name: 'Table 2', number: 2, code: 'table-2', qrCode: 'demo-table-2', capacity: 4 },
+      { name: 'Table 3', number: 3, code: 'table-3', qrCode: 'demo-table-3', capacity: 2 },
+      { name: 'Patio 1', number: 4, code: 'patio-1', qrCode: 'demo-patio-1', capacity: 6 },
+      { name: 'VIP Room', number: 5, code: 'vip', qrCode: 'demo-vip', capacity: 8 },
     ];
 
     const tables = await Table.insertMany(
@@ -261,6 +266,7 @@ async function seed() {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
     tables.forEach(table => {
       console.log(`   ${table.name}: ${baseUrl}/qr/${table.qrCode}`);
+      console.log(`      Alias: ${baseUrl}/r/${restaurant.slug}/${table.code}`);
     });
     console.log('\n═'.repeat(50));
 

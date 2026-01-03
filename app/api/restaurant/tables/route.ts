@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import connectDB from '@/lib/db';
-import { Table } from '@/lib/models';
+import { Table, Restaurant } from '@/lib/models';
 import { getAuthUser } from '@/lib/auth';
 import { tableSchema, validateRequest } from '@/lib/validation';
 import { successResponse, errorResponse, unauthorizedResponse, forbiddenResponse, serverErrorResponse } from '@/lib/api-response';
@@ -29,6 +29,8 @@ export async function GET(request: NextRequest) {
     const tables = await Table.find({ restaurantId: authUser.restaurantId })
       .sort({ number: 1 });
 
+    const restaurant = await Restaurant.findById(authUser.restaurantId);
+
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
     return successResponse({
@@ -36,8 +38,10 @@ export async function GET(request: NextRequest) {
         id: table._id,
         name: table.name,
         number: table.number,
+        code: table.code,
         qrCode: table.qrCode,
         qrUrl: `${baseUrl}/qr/${table.qrCode}`,
+        aliasQrUrl: restaurant ? `${baseUrl}/r/${restaurant.slug}/${table.code}` : null,
         capacity: table.capacity,
         isActive: table.isActive,
       })),
@@ -84,11 +88,33 @@ export async function POST(request: NextRequest) {
 
     const qrCode = crypto.randomBytes(16).toString('hex');
 
+    const toCode = (value: string) =>
+      value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+    const desiredCode = validation.data.code ? toCode(validation.data.code) : `table-${validation.data.number}`;
+
+    const existingCode = await Table.findOne({
+      restaurantId: authUser.restaurantId,
+      code: desiredCode,
+    });
+    if (existingCode) {
+      return errorResponse(`Table code ${desiredCode} already exists`);
+    }
+
     const table = await Table.create({
       ...validation.data,
       restaurantId: authUser.restaurantId,
+      code: desiredCode,
       qrCode,
     });
+
+    const restaurant = await Restaurant.findById(authUser.restaurantId);
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
@@ -96,8 +122,10 @@ export async function POST(request: NextRequest) {
       id: table._id,
       name: table.name,
       number: table.number,
+      code: table.code,
       qrCode: table.qrCode,
       qrUrl: `${baseUrl}/qr/${table.qrCode}`,
+      aliasQrUrl: restaurant ? `${baseUrl}/r/${restaurant.slug}/${table.code}` : null,
       capacity: table.capacity,
       isActive: table.isActive,
     }, 201);

@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IRestaurant extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
+  slug: string;
   currency: string;
   address: string;
   phone: string;
@@ -19,6 +20,13 @@ const RestaurantSchema = new Schema<IRestaurant>(
     name: {
       type: String,
       required: true,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
       trim: true,
     },
     currency: {
